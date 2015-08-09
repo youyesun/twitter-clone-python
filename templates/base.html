@@ -1,0 +1,16 @@
+<html>
+  <head>
+    <title>Twitter Clone</title>
+  </head>
+  <body>
+    <div>
+	{% if not login %}
+	<a href="/login">Log in</a>
+	{% else %}
+	<a href="/logoff">Log off</a>
+	{% endif %}
+    </div>
+    <hr>
+    {% block content %}{% endblock %}
+  </body>
+</html>
