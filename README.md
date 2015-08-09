@@ -1,1 +1,1 @@
-Twitter clone with PHP and NoSQL Redis
+Twitter clone with python and NoSQL Redis
