@@ -1,8 +1,12 @@
-<html>
-  <head>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script type='text/javascript' src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
     <title>Twitter Clone</title>
-  </head>
-  <body>
+</head>
+<body>
     <div>
 	{% if not login %}
 	<a href="/login">Log in</a>
@@ -11,6 +15,19 @@
 	{% endif %}
     </div>
     <hr>
+    <div class="container-fluid" style="min-height:100% width:80%">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+	{% for message in messages %}
+	<div class="alert alert-warning alert-dismissible" role="alert">
+           {{message}}
+	<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+	</div>
+	{% endfor %}
+    {% endif %}
+    {% endwith %}      
     {% block content %}{% endblock %}
-  </body>
+    </div>
+
+</body>
 </html>
