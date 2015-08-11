@@ -25,3 +25,23 @@ def login():
     return render_template('login.html', form=form)
 
 
+@app.route('/home', methods=["GET", "POST"])
+def home():
+    print "hahah log in!!!"
+
+
+@app.route('/logoff', methods=["GET", "POST"])
+def logoff():
+    if not isLoggedIn():
+        resp = make_response(redirect(url_for('login')))
+        return resp
+    r = redisLink()
+    newauthsecrect = getrand()
+    userid = User['id']
+    oldauthsecret = r.hget('user:'+str(userid), 'auth')
+    r.hset('user:'+str(userid), 'auth', newauthsecrect)
+    r.hset('auths', newauthsecrect, userid)
+    r.hdel('auths', oldauthsecrect)
+    resp = make_response(redirect(url_for('login')))
+    return resp
+
