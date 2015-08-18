@@ -1,8 +1,11 @@
 from __init__ import app
 from flask import render_template, make_response, redirect, url_for, request, flash 
-from forms import UsernamePasswordForm 
+from forms import * 
+import twitter_clone
 from twitter_clone import *
 
+
+PER_PAGE = 5
 
 @app.route('/', methods=["GET", "POST"])
 @app.route('/login', methods=["GET", "POST"])
@@ -25,9 +28,29 @@ def login():
     return render_template('login.html', form=form)
 
 
-@app.route('/home', methods=["GET", "POST"])
-def home():
-    print "hahah log in!!!"
+@app.route('/home/', defaults={'page':0}, methods=["GET", "POST"])
+@app.route('/home/page/<int:page>', methods=["GET","POST"])
+def home(page):
+    print str(page)
+    print request.url
+    form = StatusForm(request.form)
+    r = redisLink()
+    page = 0 if page < 0 else page
+    if not isLoggedIn():
+	form = UsernamePasswordForm(request.form)
+        return render_template('login.html', form=form)
+    if request.method == "POST" and form.validate():
+        postid = r.incr("next_post_id")
+        status = form.status.data.replace('\n', ' ')
+        r.hmset("post:"+str(postid), {"user_id": twitter_clone.User['id'], "time": time.time(), "body": status})
+        followers = r.zrange("followers:"+str(twitter_clone.User['id']), 0, -1)
+        followers.append(twitter_clone.User['id']) 
+        for f in followers:
+            r.lpush("posts:"+str(f),postid)
+        r.lpush("timeline",postid)
+        r.ltrim("timeline", 0, 1000)       
+    return render_template('home.html', form=form, r=r, User=twitter_clone.User,page=page)
+
 
 
 @app.route('/logoff', methods=["GET", "POST"])
