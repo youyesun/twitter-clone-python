@@ -1,25 +1,19 @@
 <!-- extend from base layout -->
 {% extends "base.html" %}
-
+{% import 'macros.html' as mc %}
 {% block content %}
-  <div>
-        {% if not login %}
-        <a href="/login">Log in</a>
-        {% else %}
-        <a href="/logoff">Log off</a>
-        {% endif %}
-    </div>
-
-  <h1>Log In</h1>
-  <form action="" method="post" name="login">
-      {{ form.csrf_token }}
-      <p>
-          
-          {{ form.username.label }}: {{ form.username(size=16) }}<br>
-	  {{ form.password.label}}: {{ form.password(size=16)}}<br>
-	
-      </p>
-      <p>{{ form.remember_me }} Remember Me</p>
-      <p><input type="submit" value="Log In"></p>
+  <div id="postform">
+  <form method="post" action="" name="home">
+    {{ User['username'] }}, what are you doing?<br>
+    <table>
+    <tr><td>{{ form.status(size=100) }}</td></tr>
+    <tr><td align="right"><input type="submit" name="doit" value="Update"></td></tr>
+    </table>
   </form>
+  <div id="homeinfobox">
+    {{ r.zcard("followers:"+User['id']) }}  followers<br>
+    {{ r.zcard("following:"+User['id']) }}  following<br>
+  </div>
+  </div>
+  {{ mc.show_user_posts_with_pagination(false,User['id'],page,10,r) }}
 {% endblock %}
