@@ -1,5 +1,5 @@
 from __init__ import app
-from flask import render_template, make_response, redirect, url_for, request, flash 
+from flask import render_template, make_response, redirect, url_for, request, flash, send_from_directory 
 from forms import * 
 import twitter_clone
 from twitter_clone import *
@@ -33,6 +33,15 @@ def login():
     return render_template('login.html', form=form)
 
 
+"""
+handle GET request for getting files, e.g. images. 
+"""
+@app.route('/css/<path:path>')
+def get_file(path):
+    return send_from_directory('css', path)
+
+ 
+
 @app.route('/home/', defaults={'page':0}, methods=["GET", "POST"])
 @app.route('/home/page/<int:page>', methods=["GET","POST"])
 def home(page):
@@ -62,12 +71,16 @@ def logoff():
         resp = make_response(redirect(url_for('login')))
         return resp
     r = redisLink()
-    newauthsecrect = getrand()
+    newauthsecret = getrand()
     userid = twitter_clone.User['id']
     oldauthsecret = r.hget('user:'+str(userid), 'auth')
-    r.hset('user:'+str(userid), 'auth', newauthsecrect)
+    r.hset('user:'+str(userid), 'auth', newauthsecret)
     r.hset('auths', newauthsecret, userid)
     r.hdel('auths', oldauthsecret)
+    """
+    delete User. 'try None' will not throw an Exception. Undefined var will.
+    """
+    del twitter_clone.User 
     resp = make_response(redirect(url_for('login')))
     return resp
 
