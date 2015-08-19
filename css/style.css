@@ -1,8 +1,11 @@
 BODY {
     font-family: Verdana, sans-serif;
-    background: url(/background.png) repeat-x top white;
+    background-image: url(/css/background.png);
+    background-repeat: repeat-x;
+    background-position: top white;
     background-attachment: fixed;
 }
+
 
 #page {
     margin: 0px;
