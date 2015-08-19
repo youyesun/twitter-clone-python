@@ -3,6 +3,7 @@ from flask import render_template, make_response, redirect, url_for, request, fl
 from forms import * 
 import twitter_clone
 from twitter_clone import *
+import pprint
 
 
 PER_PAGE = 5
@@ -10,6 +11,9 @@ PER_PAGE = 5
 @app.route('/', methods=["GET", "POST"])
 @app.route('/login', methods=["GET", "POST"])
 def login():
+    if isLoggedIn():
+        resp = make_response(redirect(url_for('home')))
+        return resp
     form = UsernamePasswordForm(request.form)
     if request.method == "POST" and form.validate():
         r = redisLink()
@@ -21,7 +25,8 @@ def login():
             if realpass == form.password.data:
                 authsecret = r.hget('user:' + userid, 'auth')
                 resp = make_response(redirect(url_for('home')))
-                resp.set_cookie('auth', authsecret)
+                pprint.pprint(authsecret)
+                resp.set_cookie('auth', authsecret.decode('latin1'))
                 return resp
             else:
                 flash('Wrong password ...')
@@ -31,14 +36,12 @@ def login():
 @app.route('/home/', defaults={'page':0}, methods=["GET", "POST"])
 @app.route('/home/page/<int:page>', methods=["GET","POST"])
 def home(page):
-    print str(page)
-    print request.url
     form = StatusForm(request.form)
     r = redisLink()
     page = 0 if page < 0 else page
     if not isLoggedIn():
-	form = UsernamePasswordForm(request.form)
-        return render_template('login.html', form=form)
+	resp = make_response(redirect(url_for('login')))
+        return resp
     if request.method == "POST" and form.validate():
         postid = r.incr("next_post_id")
         status = form.status.data.replace('\n', ' ')
@@ -60,11 +63,11 @@ def logoff():
         return resp
     r = redisLink()
     newauthsecrect = getrand()
-    userid = User['id']
+    userid = twitter_clone.User['id']
     oldauthsecret = r.hget('user:'+str(userid), 'auth')
     r.hset('user:'+str(userid), 'auth', newauthsecrect)
-    r.hset('auths', newauthsecrect, userid)
-    r.hdel('auths', oldauthsecrect)
+    r.hset('auths', newauthsecret, userid)
+    r.hdel('auths', oldauthsecret)
     resp = make_response(redirect(url_for('login')))
     return resp
 
