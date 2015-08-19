@@ -4,7 +4,9 @@ import redis, md5, urllib
 from flask import request
 import time 
 from __init__ import app
-
+import pprint
+import unicodedata
+import base64
 def getrand():
     with open("/dev/urandom", "r") as fd:
         data = fd.readline()
@@ -38,18 +40,26 @@ def isLoggedIn():
         try:
             request.cookies['auth']
         except KeyError:
+            print "cookie missed"
             return False
         else:
             r = redisLink()
             authcookie = request.cookies['auth']
-            userid = r.hget('auths', authcookie)
+            """
+            Internally Unicode is exclusively used for text except 
+            for literal strings with only ASCII character points.
+            User secret is 16-byte string which may contain non-ASCII chars.
+            """
+            userid = r.hget('auths', authcookie.encode('latin1'))
+            storedcookie = r.hget('user:'+str(1000), "auth")
             if userid:
-                if r.hget('user:'+str(userid), "auth") != authcookie:
+                if r.hget('user:'+str(userid), "auth") != authcookie.encode('latin1'):
                     return False
                 loadUserInfo(userid)
                 return True      
     else:
         return True
+app.jinja_env.globals['isLoggedIn'] = isLoggedIn
 
 
 def loadUserInfo(userid):
