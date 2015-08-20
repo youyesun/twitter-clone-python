@@ -12,8 +12,26 @@ PER_PAGE = 5
 @app.route('/login', methods=["GET", "POST"])
 def login():
     if isLoggedIn():
-        resp = make_response(redirect(url_for('home')))
-        return resp
+        return make_response(redirect(url_for('home')))
+    """
+    handle registration using a different approach from 
+    UsernamePasswordForm instance.
+    """
+    if request.method == 'POST' and request.form['doit'] == 'Create an account':
+        print "get form params"
+        print request.form['username']
+        print request.form['password']
+        print request.form['password2']
+        if request.form['username'] == "" or request.form['password'] == "" or\
+        request.form['password2'] == "":
+            flash('Each field of the registration form is needed!')
+            return make_response(redirect(url_for('login')))
+        if request.form['password'] != request.form['password2']:
+            flash('The two password fileds don\'t match!')
+            return make_response(redirect(url_for('login')))
+    """
+    handle log in using UsernamePasswordForm 
+    """
     form = UsernamePasswordForm(request.form)
     if request.method == "POST" and form.validate():
         r = redisLink()
@@ -49,8 +67,7 @@ def home(page):
     r = redisLink()
     page = 0 if page < 0 else page
     if not isLoggedIn():
-	resp = make_response(redirect(url_for('login')))
-        return resp
+	return make_response(redirect(url_for('login')))
     if request.method == "POST" and form.validate():
         postid = r.incr("next_post_id")
         status = form.status.data.replace('\n', ' ')
@@ -68,8 +85,7 @@ def home(page):
 @app.route('/logoff', methods=["GET", "POST"])
 def logoff():
     if not isLoggedIn():
-        resp = make_response(redirect(url_for('login')))
-        return resp
+        return make_response(redirect(url_for('login')))
     r = redisLink()
     newauthsecret = getrand()
     userid = twitter_clone.User['id']
@@ -81,6 +97,5 @@ def logoff():
     delete User. 'try None' will not throw an Exception. Undefined var will.
     """
     del twitter_clone.User 
-    resp = make_response(redirect(url_for('login')))
-    return resp
+    return make_response(redirect(url_for('login')))
 
