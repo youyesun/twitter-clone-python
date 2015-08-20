@@ -2,6 +2,24 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div id="welcomebox">
+<div id="registerbox">
+  <h2>Register!</h2>
+  <form method="POST" action="">
+    <table>
+    <tr>
+    <td>Username</td><td><input type="text" name="username"></td>
+    </tr>
+    <tr>
+    <td>Password</td><td><input type="password" name="password"></td>
+    </tr>
+    <tr>
+    <td>Password (again)</td><td><input type="password" name="password2"></td>
+    </tr>
+    <tr>
+    <td colspan="2" align="right"><input type="submit" name="doit" value="Create an account"></td></tr>
+    </table>
+  </form>
   <h1>Log In</h1>
   <form action="" method="post" name="login">
       {{ form.csrf_token }}
@@ -14,4 +32,13 @@
       <p>{{ form.remember_me }} Remember Me</p>
       <p><input type="submit" value="Log In"></p>
   </form>
+</div>
+Hello! 
+<ul>
+<li>1</li>
+<li>2</li>
+<li>3</li>
+<li>4</li>
+</ul>
+</div>
 {% endblock %}
