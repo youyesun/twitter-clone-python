@@ -21,14 +21,11 @@ def login():
         if request.form['username'] == "" or request.form['password'] == "" or\
         request.form['password2'] == "":
             flash('Each field of the registration form is needed!')
-            return make_response(redirect(url_for('login')))
         elif request.form['password'] != request.form['password2']:
             flash('The two password fileds don\'t match!')
-            return make_response(redirect(url_for('login')))
         elif not registration(request.form['username'], request.form['password']):
             flash('Username is already in use!')
-            return make_response(redirect(url_for('login')))
-        	
+        return make_response(redirect(url_for('login')))
     """
     handle log in using UsernamePasswordForm 
     """
