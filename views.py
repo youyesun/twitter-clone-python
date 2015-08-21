@@ -1,5 +1,5 @@
 from __init__ import app
-from flask import render_template, make_response, redirect, url_for, request, flash, send_from_directory 
+from flask import * 
 from forms import * 
 import twitter_clone
 from twitter_clone import *
@@ -15,25 +15,26 @@ def login():
         return make_response(redirect(url_for('home')))
     """
     handle registration using a different approach from 
-    UsernamePasswordForm instance.
+    UsernamePasswordForm instance. 
     """
-    if request.method == 'POST' and request.form['doit'] == 'Create an account':
-        print "get form params"
-        print request.form['username']
-        print request.form['password']
-        print request.form['password2']
+    if request.method == 'POST' and 'doit' in request.form.keys():
         if request.form['username'] == "" or request.form['password'] == "" or\
         request.form['password2'] == "":
             flash('Each field of the registration form is needed!')
             return make_response(redirect(url_for('login')))
-        if request.form['password'] != request.form['password2']:
+        elif request.form['password'] != request.form['password2']:
             flash('The two password fileds don\'t match!')
             return make_response(redirect(url_for('login')))
+        elif not registration(request.form['username'], request.form['password']):
+            flash('Username is already in use!')
+            return make_response(redirect(url_for('login')))
+        	
     """
     handle log in using UsernamePasswordForm 
     """
     form = UsernamePasswordForm(request.form)
-    if request.method == "POST" and form.validate():
+    if request.method == "POST" and 'login' in request.form.keys() and\
+    form.validate():
         r = redisLink()
         userid =  r.hget('users', form.username.data)
 	if not userid:
@@ -43,7 +44,6 @@ def login():
             if realpass == form.password.data:
                 authsecret = r.hget('user:' + userid, 'auth')
                 resp = make_response(redirect(url_for('home')))
-                pprint.pprint(authsecret)
                 resp.set_cookie('auth', authsecret.decode('latin1'))
                 return resp
             else:
@@ -71,14 +71,16 @@ def home(page):
     if request.method == "POST" and form.validate():
         postid = r.incr("next_post_id")
         status = form.status.data.replace('\n', ' ')
-        r.hmset("post:"+str(postid), {"user_id": twitter_clone.User['id'], "time": time.time(), "body": status})
+        r.hmset("post:"+str(postid), {"user_id": twitter_clone.User['id'], 
+                "time": time.time(), "body": status})
         followers = r.zrange("followers:"+str(twitter_clone.User['id']), 0, -1)
         followers.append(twitter_clone.User['id']) 
         for f in followers:
             r.lpush("posts:"+str(f),postid)
         r.lpush("timeline",postid)
         r.ltrim("timeline", 0, 1000)       
-    return render_template('home.html', form=form, r=r, User=twitter_clone.User,page=page)
+    return render_template('home.html', form=form, r=r, 
+                           User=twitter_clone.User,page=page)
 
 
 
