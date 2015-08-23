@@ -6,8 +6,6 @@ from twitter_clone import *
 import pprint
 
 
-PER_PAGE = 5
-
 @app.route('/', methods=["GET", "POST"])
 @app.route('/login', methods=["GET", "POST"])
 def login():
@@ -32,14 +30,13 @@ def login():
     form = UsernamePasswordForm(request.form)
     if request.method == "POST" and 'login' in request.form.keys() and\
     form.validate():
-        r = redisLink()
-        userid =  r.hget('users', form.username.data)
+        userid = getUserid(form.username.data)
 	if not userid:
             flash('User doesn\'t exists ...')
         else:
-            realpass = r.hget('user:' + userid, 'password')
+            realpass = getPassword(userid)
             if realpass == form.password.data:
-                authsecret = r.hget('user:' + userid, 'auth')
+                authsecret = getAuthSecret(userid)
                 resp = make_response(redirect(url_for('home')))
                 resp.set_cookie('auth', authsecret.decode('latin1'))
                 return resp
@@ -80,6 +77,23 @@ def home(page):
                            User=twitter_clone.User,page=page)
 
 
+@app.route('/timeline/', defaults={'page':0}, methods=["GET"])
+@app.route('/timeline/page/<int:page>', methods=["GET"])
+def timeline(page):
+    form = StatusForm(request.form)
+    r = redisLink()
+    page = 0 if page < 0 else page
+    return render_template('timeline.html', r=r, page=page)
+
+
+@app.route('/profile/<string:username>', defaults={'page':0}, methods=["GET"])
+@app.route('/profile/<string:username>/page/<int:page>', methods=["GET"])
+def profile(username, page):
+    r = redisLink()
+    userid = r.hget("users", username)
+    
+    page = 0 if page < 0 else page
+ 
 
 @app.route('/logoff', methods=["GET", "POST"])
 def logoff():
