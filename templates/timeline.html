@@ -1,0 +1,6 @@
+<!-- extend from base layout -->
+{% extends "base.html" %}
+{% import 'macros.html' as mc %}
+{% block content %}
+  {{ mc.show_timeline_posts_with_pagination(page,10,r) }}
+{% endblock %}

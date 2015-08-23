@@ -2,7 +2,7 @@
 {% set userid = post['user_id']|string %}
 {% set username = r.hget("user:"+userid,"username") %}
 {% set elapsed = strElapsed(post['time']) %}
-<div class="post"><a class="username" href="{{ combineurl("profile",{"u":username}) }}"> {{ username }} </a>
+<div class="post"><a class="username" href="{{ "/profile/"+username }}"> {{ username }} </a>
 {{ ' ' + post['body'] }}
 <br>
 <i>{{ 'posted ' + elapsed + ' ago via web' }}</i>  
@@ -10,7 +10,7 @@
 {%- endmacro %}
 
 
-{% macro show_user_posts(userid, start, count, posts, r) -%}
+{% macro show_user_posts(start, count, posts, r) -%}
 {% set c = 0 %}
 {% for p in posts %}
 {% set post = r.hgetall("post:"+p|string) %}
@@ -32,13 +32,9 @@
 {% if prev < 0 %}
 {% set prev = 0 %}
 {% endif %}
-{% if userid %}
 {% set key = "posts:" + userid|string %} 
-{% else %}
-{% set key = "timeline" %}
-{% endif %}
 {% set posts = r.lrange(key, start, start+count) %}
-{{ show_user_posts(userid, start, count, posts, r) }}
+{{ show_user_posts(start, count, posts, r) }}
 <div class="rightlink">
 {% if start > 0%}
 {% if username %}
@@ -61,4 +57,25 @@
 {%- endmacro %}
 
 
+{% macro show_timeline_posts_with_pagination(start, count, r) -%}
+{% set thispage = request.base_url %}
+{% set nnext = start + 10 %}
+{% set prev = start - 10 %}
+{% if prev < 0 %}
+{% set prev = 0 %}
+{% endif %}
+{% set posts = r.lrange("timeline", start, start+count) %}
+{{ show_user_posts(start, count, posts, r) }}
+<div class="rightlink">
+{% if start > 0%}
+<a href= "{{ "/timeline/page/" + prev|string }}" >&laquo; Newer posts</a>
+{% endif %}
+{% if posts|length == count + 1 %}
+{% if start > 0%}
+{{ " | " }}
+{% endif %}
+<a href= "{{ "/timeline/page/" + nnext|string }}" > Old posts &raquo;</a>
+{% endif %}
+</div>
+{%- endmacro %}
 
