@@ -67,12 +67,14 @@ def home(page):
         status = form.status.data.replace('\n', ' ')
         r.hmset("post:"+str(postid), {"user_id": twitter_clone.User['id'], 
                 "time": time.time(), "body": status})
+        r.lpush("userposts:"+str(twitter_clone.User['id']),postid)
         followers = r.zrange("followers:"+str(twitter_clone.User['id']), 0, -1)
         followers.append(twitter_clone.User['id']) 
         for f in followers:
             r.lpush("posts:"+str(f),postid)
         r.lpush("timeline",postid)
-        r.ltrim("timeline", 0, 1000)       
+        r.ltrim("timeline", 0, 1000)
+        return make_response(redirect(url_for('home')))       
     return render_template('home.html', form=form, r=r, 
                            User=twitter_clone.User,page=page)
 
@@ -86,14 +88,23 @@ def timeline(page):
     return render_template('timeline.html', r=r, page=page)
 
 
-@app.route('/profile/<string:username>', defaults={'page':0}, methods=["GET"])
-@app.route('/profile/<string:username>/page/<int:page>', methods=["GET"])
+@app.route('/profile/', defaults={'username':None,'page':0}, methods=["GET","POST"])
+@app.route('/profile/<string:username>/', defaults={'page':0}, methods=["GET","POST"])
+@app.route('/profile/<string:username>/page/<int:page>', methods=["GET","POST"])
 def profile(username, page):
     r = redisLink()
     userid = r.hget("users", username)
-    
+    if not userid:
+        if not isLoggedIn():
+            resp = make_response(redirect(url_for('login')))
+        else:
+            resp = make_response(redirect(url_for('home')))
+        flash('User doesn\'t exist!')
+        return resp
     page = 0 if page < 0 else page
- 
+    return render_template('profile.html', r=r, userid=userid, page=page) 
+
+
 
 @app.route('/logoff', methods=["GET", "POST"])
 def logoff():
