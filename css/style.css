@@ -101,6 +101,14 @@ a.username {
     margin-right:10px;
 }
 
+a.postcontent{
+    display:inline-block;
+    margin-top:10px;
+    text-decoration: none;
+    color:#444;
+    word-break: break-all;
+}
+
 h2.username {
     color:#66dd66;
     margin-left:15px;
