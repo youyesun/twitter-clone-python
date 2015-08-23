@@ -1,0 +1,8 @@
+<!-- extend from base layout -->
+{% extends "base.html" %}
+{% import 'macros.html' as mc %}
+{% block content %}
+{% set username = r.hget("user:"+userid|string, "username") %}
+  <h2 class="username">{{ username }}</h2>
+  {{ mc.show_user_own_posts_with_pagination(userid,page,10,r) }}
+{% endblock %}
