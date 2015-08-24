@@ -88,12 +88,13 @@ def timeline(page):
     return render_template('timeline.html', r=r, page=page)
 
 
-@app.route('/profile/', defaults={'username':None,'page':0}, methods=["GET","POST"])
-@app.route('/profile/<string:username>/', defaults={'page':0}, methods=["GET","POST"])
-@app.route('/profile/<string:username>/page/<int:page>', methods=["GET","POST"])
-def profile(username, page):
+@app.route('/profile/', defaults={'username':None,'page':0,'f':-1}, methods=["GET","POST"])
+@app.route('/profile/<string:username>/', defaults={'page':0, 'f':-1}, methods=["GET","POST"])
+@app.route('/profile/<string:username>/page/<int:page>', defaults={'f':-1}, methods=["GET","POST"])
+def profile(username, page, f):
     r = redisLink()
-    userid = r.hget("users", username)
+    userid = getUserid(username)
+    cur_userid = getCurrentUserid()
     if not userid:
         if not isLoggedIn():
             resp = make_response(redirect(url_for('login')))
@@ -102,8 +103,43 @@ def profile(username, page):
         flash('User doesn\'t exist!')
         return resp
     page = 0 if page < 0 else page
-    return render_template('profile.html', r=r, userid=userid, page=page) 
+    return render_template('profile.html', r=r, cur_userid=cur_userid, userid=userid, page=page) 
 
+
+@app.route('/follow/', defaults={'userid':-1,'f':-1}, methods=["GET","POST"])
+@app.route('/follow/<int:userid>/', defaults={'f':-1}, methods=["GET","POST"])
+@app.route('/follow/<int:userid>/<int:f>', methods=["GET","POST"])
+def follow(userid, f):
+    if not isLoggedIn():
+        return make_response(redirect(url_for('login')))
+    if not userid:
+        return make_response(redirect(url_for('home')))
+    r = redisLink()
+    cur_userid = getCurrentUserid()
+    username = getUsername(userid)
+    if (f!= 0 and f!=1) or cur_userid == userid:
+        return make_response(redirect('/profile/'+username))
+    if f==1:
+        followUser(userid, cur_userid)
+    if f==0:
+        unfollowUser(userid, cur_userid) 
+    return make_response(redirect('profile/'+username))
+
+"""
+    r = redisLink()
+    userid = getUserid(username)
+    cur_userid = getCurrentUserid()
+    if not userid:
+        if not isLoggedIn():
+            resp = make_response(redirect(url_for('login')))
+        else:
+            resp = make_response(redirect(url_for('home')))
+        flash('User doesn\'t exist!')
+        return resp
+    page = 0 if page < 0 else page
+    return render_template('profile.html', r=r, cur_userid=cur_userid, userid=userid, page=page)
+
+"""
 
 
 @app.route('/logoff', methods=["GET", "POST"])
