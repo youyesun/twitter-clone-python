@@ -7,13 +7,14 @@ from __init__ import app
 import pprint
 import unicodedata
 import base64
+
+
 def getrand():
     with open("/dev/urandom", "r") as fd:
         data = fd.readline()
         m = md5.new()
         m.update(data)
         return m.digest()
- 
 
 
 def static_vars(**kwargs):
@@ -30,6 +31,33 @@ def redisLink():
         return redisLink.r
     redisLink.r = redis.StrictRedis(host='localhost', port=6379, db=0)
     return redisLink.r
+
+
+def registration(username, userpass):
+    r = redisLink()
+    if r.hget("users",username):
+        return False
+    userid = r.incr("next_user_id")
+    print str(userid)
+    authsecret = getrand()
+    r.hset("users", username, userid)
+    r.hmset("user:"+str(userid), {"username":username,"password":userpass,
+            "auth":authsecret})
+    r.hset("auths", authsecret, userid)
+    return True
+
+
+def followUser(userid, followerid):
+    r = redisLink()
+    t = time.time()
+    r.zadd("followers:"+str(userid), t, followerid)
+    r.zadd("following:"+str(followerid), t, userid)
+
+
+def unfollowUser(userid, followerid):
+    r = redisLink()
+    r.zrem("followers:"+str(userid), followerid)
+    r.zrem("following:"+str(followerid), userid)
 
 
 def isLoggedIn():
@@ -51,9 +79,9 @@ def isLoggedIn():
             User secret is 16-byte string which may contain non-ASCII chars.
             """
             userid = r.hget('auths', authcookie.encode('latin1'))
-            storedcookie = r.hget('user:'+str(1000), "auth")
+            storedsecret = r.hget('user:'+str(userid), "auth")
             if userid:
-                if r.hget('user:'+str(userid), "auth") != authcookie.encode('latin1'):
+                if storedsecret != authcookie.encode('latin1'):
                     return False
                 loadUserInfo(userid)
                 return True      
@@ -61,6 +89,34 @@ def isLoggedIn():
         return True
 app.jinja_env.globals['isLoggedIn'] = isLoggedIn
 
+
+def getUsername(userid):
+    r = redisLink()
+    return r.hget("user:"+str(userid), "username")
+
+
+def getUserid(username):
+    r = redisLink()
+    return r.hget('users', username)
+
+
+def getCurrentUserid():
+    global User
+    try:
+        return User['id']
+    except Exception as e:
+        return -1 
+
+
+def getPassword(userid):
+    r = redisLink()
+    return r.hget('user:' + userid, 'password')
+
+
+def getAuthSecret(userid):
+    r = redisLink()
+    return r.hget('user:' + userid, 'auth')
+ 
 
 def loadUserInfo(userid):
     global User
@@ -84,56 +140,6 @@ def strElapsed(t):
     d = (int)(d/(3600*24))
     return str(d)+" day"+("s" if d > 1 else "")
 app.jinja_env.globals['strElapsed'] = strElapsed
-
-
-def showPost(postid, res):
-    r = redisLink()
-    post = r.hgetall("post:"+str(postid))
-    if not post:
-        return False
-    userid = post['user_id']
-    username = r.hget("user:"+str(userid), "username")
-    elapsed = strElapsed(post['time'])
-    userlink = "<a class=\"username\" href=\"profile.php?"+urllib.urlencode({"u":username})+"\">"+username+"</a>"
-    res += '<div class="post">'+userlink+' '+post['body']+"<br>"
-    res += '<i>posted '+elapsed+' ago via web</i></div>'
-    return True
-
-
-def showUserPosts(userid, start, count):
-    r = redisLink()
-    key = "timeline" if (userid == -1) else "posts:"+str(userid)
-    posts = r.lrange(key, start, start+count)
-    c = 0
-    for p in posts:
-        if(showPost(p)):
-            c += 1
-        if c == count:
-            break
-    return len(posts) == count+1    
-app.jinja_env.globals['showUserPosts'] = showUserPosts
-
-
-def showUserPostsWithPagination(username, userid, start, count):
-    thispage = request.base_url
-    nnext = start + 10
-    prev = start - 10 if (start - 10) > 0 else 0
-    nextlink = False
-    prevlink = False
-    res = ""
-    u = "&" + urllib.urlencode({"u":username}) if username else ""
-    if showUserPosts(userid, start, count, res):
-        nextlink = "<a href=\""+thispage+"?"+urllib.urlencode({"page":nnext})+u+"\">Older posts &raquo;</a>"
-    if start > 0:  
-        prevlink = "<a href=\""+thispage+"?"+urllib.urlencode({"page":prev})+u+"\">&laquo; Newer posts</a>"
-        prevlink = prevlink +  " | "  if nextlink else  prevlink
-    if prevlink:
-        res += "<div class=\"rightlink\">"+prevlink
-    if nextlink:
-        res += nextlink
-    res += "</div>"
-    return res
-app.jinja_env.globals['showUserPostsWithPagination'] = showUserPostsWithPagination
 
 
 def combineurl(base, param):
