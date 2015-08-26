@@ -1,9 +1,11 @@
 from __init__ import app
-from flask import * 
+from flask import *
+from flask_login import login_user 
 from forms import * 
 import twitter_clone
 from twitter_clone import *
 import pprint
+from models import *
 
 
 @app.route('/', methods=["GET", "POST"])
@@ -31,12 +33,15 @@ def login():
     if request.method == "POST" and 'login' in request.form.keys() and\
     form.validate():
         userid = getUserid(form.username.data)
+        print str(form.remember_me.data)
 	if not userid:
             flash('User doesn\'t exists ...')
         else:
             realpass = getPassword(userid)
             if realpass == form.password.data:
                 authsecret = getAuthSecret(userid)
+                if form.remember_me.data:
+                    session['remember'] = 'set'
                 resp = make_response(redirect(url_for('home')))
                 resp.set_cookie('auth', authsecret.decode('latin1'))
                 return resp
@@ -57,6 +62,7 @@ def get_file(path):
 @app.route('/home/', defaults={'page':0}, methods=["GET", "POST"])
 @app.route('/home/page/<int:page>', methods=["GET","POST"])
 def home(page):
+    print session
     form = StatusForm(request.form)
     r = redisLink()
     page = 0 if page < 0 else page
@@ -125,21 +131,28 @@ def follow(userid, f):
         unfollowUser(userid, cur_userid) 
     return make_response(redirect('profile/'+username))
 
-"""
-    r = redisLink()
-    userid = getUserid(username)
-    cur_userid = getCurrentUserid()
-    if not userid:
-        if not isLoggedIn():
-            resp = make_response(redirect(url_for('login')))
-        else:
-            resp = make_response(redirect(url_for('home')))
-        flash('User doesn\'t exist!')
-        return resp
-    page = 0 if page < 0 else page
-    return render_template('profile.html', r=r, cur_userid=cur_userid, userid=userid, page=page)
 
-"""
+@app.route('/post/<int:postid>', defaults={'page':0}, methods=["GET","POST"])
+@app.route('/post/<int:postid>/<int:page>', methods=["GET","POST"])
+def showpost(postid, page):
+    if not isLoggedIn():
+        return make_response(redirect(url_for('login')))
+    form = StatusForm(request.form)
+    r = redisLink()
+    page = 0 if page < 0 else page
+    post = r.hgetall("post:"+str(postid))
+    if request.method == "POST" and form.validate():
+        replyid = r.incr("next_reply_id")
+        replybody = form.status.data.replace('\n', ' ')
+        r.hmset("reply:"+str(replyid), {"user_id": twitter_clone.User['id'],
+                "time": time.time(), "body": replybody})
+        r.lpush("replys:"+str(postid),replyid)
+	return make_response(redirect(url_for('showpost',postid=postid)))
+    return render_template('post.html', form=form, r=r, post=post,
+                           postid=postid, page=page)
+
+    
+
 
 
 @app.route('/logoff', methods=["GET", "POST"])
