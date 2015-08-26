@@ -1,11 +1,27 @@
-{% macro showpost(post, r) -%}
+{% macro showpost(post, postid, r) -%}
 {% set userid = post['user_id']|string %}
 {% set username = r.hget("user:"+userid,"username") %}
 {% set elapsed = strElapsed(post['time']) %}
-<div class="post"><a class="username" href="{{ "/profile/"+username }}"> {{ username }} </a>
-{{ ' ' + post['body'] }}
+<div class="post">
+<a class="username" href="{{ "/profile/"+username }}"> {{ username }} </a>
+<i>&#149; {{ elapsed + ' ago' }}</i>
 <br>
-<i>{{ 'posted ' + elapsed + ' ago via web' }}</i>  
+<a class="postcontent" href="{{ "/post/"+postid|string }}"> {{ ' ' + post['body'] }} </a>
+<br>
+</div>
+{%- endmacro %}
+
+
+{% macro showreply(reply, replyid, r) -%}
+{% set userid = reply['user_id']|string %}
+{% set username = r.hget("user:"+userid,"username") %}
+{% set elapsed = strElapsed(reply['time']) %}
+<div class="post">
+<a class="username" href="{{ "/profile/"+username }}"> {{ username }} </a>
+<i>&#149; {{ elapsed + ' ago' }}</i>
+<br>
+<a class="postcontent" > {{ ' ' + reply['body'] }} </a>
+<br>
 </div>
 {%- endmacro %}
 
@@ -15,7 +31,22 @@
 {% for p in posts %}
 {% set post = r.hgetall("post:"+p|string) %}
 {% if post %}
-{{ showpost(post,r) }}
+{{ showpost(post,p,r) }}
+{% set c = c + 1 %}
+{% endif %}
+{% if c == count %}
+{% break %}
+{% endif %}
+{% endfor %}
+{%- endmacro %}
+
+
+{% macro show_post_replys(start, count, replys, r) -%}
+{% set c = 0 %}
+{% for re in replys %}
+{% set reply = r.hgetall("reply:"+re|string) %}
+{% if reply %}
+{{ showreply(reply,re,r) }}
 {% set c = c + 1 %}
 {% endif %}
 {% if c == count %}
@@ -57,6 +88,30 @@
 {%- endmacro %}
 
 
+{% macro show_post_replys_with_pagination(username, postid, start, count, r) -%}
+{% set thispage = request.base_url %}
+{% set nnext = start + 10 %} 
+{% set prev = start - 10 %}
+{% if prev < 0 %}
+{% set prev = 0 %}
+{% endif %}
+{% set key = "replys:" + postid|string %} 
+{% set replys = r.lrange(key, start, start+count) %}
+{{ show_post_replys(start, count, replys, r) }}
+<div class="rightlink">
+{% if start > 0%}
+<a href= "{{ "/post/"+postid|string+"/"+prev|string }}" >&laquo; Newer replies</a>
+{% endif %}
+{% if replys|length == count + 1 %}
+{% if start > 0%}
+{{ " | " }}
+{% endif %}
+<a href= "{{ "/post/"+postid|string+"/"+nnext|string }}" > Old replies &raquo;</a>
+{% endif %}
+</div>
+{%- endmacro %}
+
+
 {% macro show_timeline_posts_with_pagination(start, count, r) -%}
 {% set thispage = request.base_url %}
 {% set nnext = start + 10 %}
@@ -75,6 +130,30 @@
 {{ " | " }}
 {% endif %}
 <a href= "{{ "/timeline/page/" + nnext|string }}" > Old posts &raquo;</a>
+{% endif %}
+</div>
+{%- endmacro %}
+
+
+{% macro show_user_own_posts_with_pagination(userid, start, count, r) -%}
+{% set thispage = request.base_url %}
+{% set nnext = start + 10 %}
+{% set prev = start - 10 %}
+{% if prev < 0 %}
+{% set prev = 0 %}
+{% endif %}
+{% set username = r.hget("user:"+userid|string, "username") %}
+{% set posts = r.lrange("userposts:"+userid|string, start, start+count) %}
+{{ show_user_posts(start, count, posts, r) }}
+<div class="rightlink">
+{% if start > 0%}
+<a href= "{{ "/profile/"+username|string+"/page/" + prev|string }}" >&laquo; Newer posts</a>
+{% endif %}
+{% if posts|length == count + 1 %}
+{% if start > 0%}
+{{ " | " }}
+{% endif %}
+<a href= "{{ "/profile/"+username|string+"/page/" + nnext|string }}" > Old posts &raquo;</a>
 {% endif %}
 </div>
 {%- endmacro %}
