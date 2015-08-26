@@ -1,9 +1,6 @@
 BODY {
     font-family: Verdana, sans-serif;
-    background-image: url(/css/background.png);
-    background-repeat: repeat-x;
-    background-position: top white;
-    background-attachment: fixed;
+    background-color:#F5F8FA;
 }
 
 
@@ -101,6 +98,13 @@ a.username {
     margin-right:10px;
 }
 
+a.usernameh2 {
+    text-decoration: none;
+    font-weight:bold;
+    color:#0f2a44;
+    font-size:200%;
+    margin-right:10px;
+}
 a.postcontent{
     display:inline-block;
     margin-top:10px;
@@ -110,7 +114,7 @@ a.postcontent{
 }
 
 h2.username {
-    color:#66dd66;
+    color:#0f2a44;
     margin-left:15px;
 }
 
@@ -149,13 +153,13 @@ font-size:12px;
     width:400px;
     height:400px;
     background-color:#e3e8e4;
-    float:right;
+    float:left;
     padding:5px;
     -moz-border-radius:5px;
     -webkit-border-radius:5px;
     border-radius:5px;
     border:3px #c8d8bf solid;
-    margin-right:0px;
+    margin-right:20px;
     margin-left:15px;
 }
 
