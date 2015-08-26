@@ -1,0 +1,26 @@
+<!-- extend from base layout -->
+{% extends "base.html" %}
+{% import 'macros.html' as mc %}
+{% block content %}
+  {% set userid = post['user_id']|string %}
+  {% set username = r.hget("user:"+userid,"username") %}
+  {% set elapsed = strElapsed(post['time']) %}
+  <div class="post">
+  <a class="usernameh2" href="{{ "/profile/"+username }}"> {{ username }} </a>
+  <i>&#149; {{ elapsed + ' ago' }}</i>
+  <br>
+  <a class="postcontent"> {{ ' ' + post['body'] }} </a>
+  <br>
+  </div>
+
+  <div id="postform">
+  <form method="post" action="" name="home">
+    What do you think about it?<br>
+    <table>
+    <tr><td>{{ form.status(cols="70",rows="3") }} </td></tr>
+    <tr><td align="right"><input type="submit" name="doit" value="Reply"></td></tr>
+    </table>
+  </form>
+  </div>
+  {{ mc.show_post_replys_with_pagination(false,postid,page,10,r) }}
+{% endblock %}
