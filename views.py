@@ -33,15 +33,12 @@ def login():
     if request.method == "POST" and 'login' in request.form.keys() and\
     form.validate():
         userid = getUserid(form.username.data)
-        print str(form.remember_me.data)
 	if not userid:
             flash('User doesn\'t exists ...')
         else:
             realpass = getPassword(userid)
             if realpass == form.password.data:
                 authsecret = getAuthSecret(userid)
-                if form.remember_me.data:
-                    session['remember'] = 'set'
                 resp = make_response(redirect(url_for('home')))
                 resp.set_cookie('auth', authsecret.decode('latin1'))
                 return resp
@@ -62,24 +59,13 @@ def get_file(path):
 @app.route('/home/', defaults={'page':0}, methods=["GET", "POST"])
 @app.route('/home/page/<int:page>', methods=["GET","POST"])
 def home(page):
-    print session
     form = StatusForm(request.form)
     r = redisLink()
     page = 0 if page < 0 else page
     if not isLoggedIn():
 	return make_response(redirect(url_for('login')))
     if request.method == "POST" and form.validate():
-        postid = r.incr("next_post_id")
-        status = form.status.data.replace('\n', ' ')
-        r.hmset("post:"+str(postid), {"user_id": twitter_clone.User['id'], 
-                "time": time.time(), "body": status})
-        r.lpush("userposts:"+str(twitter_clone.User['id']),postid)
-        followers = r.zrange("followers:"+str(twitter_clone.User['id']), 0, -1)
-        followers.append(twitter_clone.User['id']) 
-        for f in followers:
-            r.lpush("posts:"+str(f),postid)
-        r.lpush("timeline",postid)
-        r.ltrim("timeline", 0, 1000)
+        post(form.status.data.replace('\n', ' '))
         return make_response(redirect(url_for('home')))       
     return render_template('home.html', form=form, r=r, 
                            User=twitter_clone.User,page=page)
@@ -94,9 +80,12 @@ def timeline(page):
     return render_template('timeline.html', r=r, page=page)
 
 
-@app.route('/profile/', defaults={'username':None,'page':0,'f':-1}, methods=["GET","POST"])
-@app.route('/profile/<string:username>/', defaults={'page':0, 'f':-1}, methods=["GET","POST"])
-@app.route('/profile/<string:username>/page/<int:page>', defaults={'f':-1}, methods=["GET","POST"])
+@app.route('/profile/', defaults={'username':None,'page':0,'f':-1}, 
+           methods=["GET","POST"])
+@app.route('/profile/<string:username>/', defaults={'page':0, 'f':-1}, 
+           methods=["GET","POST"])
+@app.route('/profile/<string:username>/page/<int:page>', defaults={'f':-1}, 
+           methods=["GET","POST"])
 def profile(username, page, f):
     r = redisLink()
     userid = getUserid(username)
@@ -109,7 +98,8 @@ def profile(username, page, f):
         flash('User doesn\'t exist!')
         return resp
     page = 0 if page < 0 else page
-    return render_template('profile.html', r=r, cur_userid=cur_userid, userid=userid, page=page) 
+    return render_template('profile.html', r=r, cur_userid=cur_userid, 
+                           userid=userid, page=page) 
 
 
 @app.route('/follow/', defaults={'userid':-1,'f':-1}, methods=["GET","POST"])
@@ -142,33 +132,20 @@ def showpost(postid, page):
     page = 0 if page < 0 else page
     post = r.hgetall("post:"+str(postid))
     if request.method == "POST" and form.validate():
-        replyid = r.incr("next_reply_id")
-        replybody = form.status.data.replace('\n', ' ')
-        r.hmset("reply:"+str(replyid), {"user_id": twitter_clone.User['id'],
-                "time": time.time(), "body": replybody})
-        r.lpush("replys:"+str(postid),replyid)
+        reply(postid, form.status.data.replace('\n', ' '))
 	return make_response(redirect(url_for('showpost',postid=postid)))
     return render_template('post.html', form=form, r=r, post=post,
                            postid=postid, page=page)
-
-    
-
 
 
 @app.route('/logoff', methods=["GET", "POST"])
 def logoff():
     if not isLoggedIn():
         return make_response(redirect(url_for('login')))
-    r = redisLink()
-    newauthsecret = getrand()
-    userid = twitter_clone.User['id']
-    oldauthsecret = r.hget('user:'+str(userid), 'auth')
-    r.hset('user:'+str(userid), 'auth', newauthsecret)
-    r.hset('auths', newauthsecret, userid)
-    r.hdel('auths', oldauthsecret)
+    resetUserAuthSecret()
     """
     delete User. 'try None' will not throw an Exception. Undefined var will.
     """
-    del twitter_clone.User 
+    deleteUserInfo() 
     return make_response(redirect(url_for('login')))
 

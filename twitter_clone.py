@@ -90,6 +90,16 @@ def isLoggedIn():
 app.jinja_env.globals['isLoggedIn'] = isLoggedIn
 
 
+def resetUserAuthSecret():
+    r = redisLink()
+    newauthsecret = getrand()
+    userid = getCurrentUserid()
+    oldauthsecret = r.hget('user:'+str(userid), 'auth')
+    r.hset('user:'+str(userid), 'auth', newauthsecret)
+    r.hset('auths', newauthsecret, userid)
+    r.hdel('auths', oldauthsecret)
+    
+
 def getUsername(userid):
     r = redisLink()
     return r.hget("user:"+str(userid), "username")
@@ -116,6 +126,30 @@ def getPassword(userid):
 def getAuthSecret(userid):
     r = redisLink()
     return r.hget('user:' + userid, 'auth')
+
+
+def post(body):
+    r = redisLink()
+    postid = r.incr("next_post_id")
+    cur_userid = getCurrentUserid()
+    r.hmset("post:"+str(postid), {"user_id": cur_userid, "time": time.time(), 
+            "body": body})
+    r.lpush("userposts:"+str(cur_userid),postid)
+    followers = r.zrange("followers:"+str(cur_userid), 0, -1)
+    followers.append(cur_userid)
+    for f in followers:
+        r.lpush("posts:"+str(f),postid)
+    r.lpush("timeline",postid)
+    r.ltrim("timeline", 0, 1000)
+
+
+def reply(postid, body):
+    r = redisLink()
+    replyid = r.incr("next_reply_id")
+    cur_userid = getCurrentUserid()
+    r.hmset("reply:"+str(replyid), {"user_id": cur_userid, "time": time.time(), 
+            "body": body})
+    r.lpush("replys:"+str(postid),replyid)
  
 
 def loadUserInfo(userid):
@@ -125,6 +159,11 @@ def loadUserInfo(userid):
     User['id'] = userid
     User['username'] = r.hget('user:'+str(userid), 'username')
     return True
+
+
+def deleteUserInfo():
+    global User
+    del User
 
 
 def strElapsed(t):
