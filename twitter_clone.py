@@ -118,6 +118,11 @@ def getCurrentUserid():
         return -1 
 
 
+def getCurrentUser():
+    global User
+    return User
+
+
 def getPassword(userid):
     r = redisLink()
     return r.hget('user:' + userid, 'password')
