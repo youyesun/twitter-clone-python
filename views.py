@@ -1,11 +1,7 @@
 from __init__ import app
 from flask import *
-from flask_login import login_user 
 from forms import * 
-import twitter_clone
 from twitter_clone import *
-import pprint
-from models import *
 
 
 @app.route('/', methods=["GET", "POST"])
@@ -68,7 +64,7 @@ def home(page):
         post(form.status.data.replace('\n', ' '))
         return make_response(redirect(url_for('home')))       
     return render_template('home.html', form=form, r=r, 
-                           User=twitter_clone.User,page=page)
+                           User=getCurrentUser(), page=page)
 
 
 @app.route('/timeline/', defaults={'page':0}, methods=["GET"])
